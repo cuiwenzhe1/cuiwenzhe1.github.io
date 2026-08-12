@@ -50,10 +50,12 @@
 
   if (!titleEl.dataset.typed) {
     titleEl.dataset.typed = '1';
-    typeText(titleEl, fullTitle, 150, function () {
-      titleEl.classList.add('typed-done');
-      setTimeout(function () { subtitleLoop(0); }, 900);
-    });
+    setTimeout(function () {
+      typeText(titleEl, fullTitle, 150, function () {
+        titleEl.classList.add('typed-done');
+        setTimeout(function () { subtitleLoop(0); }, 900);
+      });
+    }, 1200);
   } else {
     titleEl.classList.add('typed-done');
     subtitleLoop(0);
