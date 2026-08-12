@@ -242,6 +242,21 @@
   background: none !important;
 }
 
+/* ===== 友链页 / 分类页：使用各自指定的顶部图（覆盖上面统一的 ink.jpg）===== */
+#body-wrap.type-link #page-header {
+  background:
+    linear-gradient(rgba(255, 255, 255, .32), rgba(255, 255, 255, .18) 45%, rgba(255, 255, 255, .9) 100%),
+    url('/img/girl.jpg') center/cover no-repeat !important;
+  animation: ink-unfold 1.4s cubic-bezier(.25, .6, .25, 1) forwards;
+}
+
+#body-wrap.type-categories #page-header {
+  background:
+    linear-gradient(rgba(255, 255, 255, .32), rgba(255, 255, 255, .18) 45%, rgba(255, 255, 255, .9) 100%),
+    url('/img/dragon.jpg') center/cover no-repeat !important;
+  animation: ink-unfold 1.4s cubic-bezier(.25, .6, .25, 1) forwards;
+}
+
 /* 子页面标题 + 文章页标题：深色黑体，去阴影 */
 #page-header.not-home-page #site-title,
 #page-header.post-bg .post-title {
