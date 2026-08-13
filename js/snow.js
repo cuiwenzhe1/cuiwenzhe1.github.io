@@ -11,23 +11,28 @@
   var W = 0, H = 0;
 
   function resize() {
-    W = window.innerWidth;
-    H = window.innerHeight;
-    canvas.width = W * DPR;
-    canvas.height = H * DPR;
+    W = window.innerWidth || document.documentElement.clientWidth || 800;
+    H = window.innerHeight || document.documentElement.clientHeight || 600;
+    if (W < 2) W = 800;
+    if (H < 2) H = 600;
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   }
   resize();
   window.addEventListener('resize', resize);
+  window.addEventListener('load', resize);
 
   var COUNT = W >= 768 ? 90 : 35;
   var flakes = [];
 
-  function makeFlake(atTop) {
+  function makeFlake(where) {
     var size = Math.random();
     return {
       x: Math.random() * W,
-      y: atTop ? -Math.random() * H : Math.random() * H,
+      y: where === 'top'
+        ? -6 - Math.random() * 60
+        : Math.random() * H,
       r: size < 0.7 ? 2.0 + Math.random() * 2.2 : 3.0 + Math.random() * 2.6,
       star: size >= 0.7,
       vy: 0.4 + Math.random() * 1.0,
@@ -38,6 +43,7 @@
       o: 0.85 + Math.random() * 0.15
     };
   }
+  for (var i = 0; i < COUNT; i++) flakes.push(makeFlake('full'));
 
   function drawStar(f, dx, dy, color, alpha) {
     ctx.beginPath();
@@ -53,21 +59,15 @@
     ctx.globalAlpha = 1;
   }
 
-  var last = performance.now();
-  function frame(now) {
-    if (document.hidden) {
-      last = now;
-      requestAnimationFrame(frame);
-      return;
-    }
-    var dt = Math.min((now - last) / 16.666, 3);
-    last = now;
+  var frames = 0;
+  function frame() {
+    var now = performance.now();
     ctx.clearRect(0, 0, W, H);
     for (var i = 0; i < flakes.length; i++) {
       var f = flakes[i];
-      f.y += f.vy * dt;
-      f.x += f.vx * dt + Math.sin(now / 1600 * f.w + f.ph) * f.sway * dt;
-      if (f.y > H + 6) f = flakes[i] = makeFlake(false);
+      f.y += f.vy;
+      f.x += f.vx + Math.sin(now / 1600 * f.w + f.ph) * f.sway;
+      if (f.y > H + 6) f = flakes[i] = makeFlake('top');
 
       if (f.star) {
         drawStar(f, 1.5, 1.6, 'rgba(70,85,102,' + (f.o * 0.5) + ')', 1);
@@ -88,13 +88,19 @@
         ctx.stroke();
       }
     }
+    frames++;
+    if (frames % 30 === 0) dbg.textContent = badgeText();
     requestAnimationFrame(frame);
   }
-  requestAnimationFrame(frame);
 
   var dbg = document.createElement('div');
   dbg.id = 'ink-snow-dbg';
   dbg.style.cssText = 'position:fixed;right:8px;bottom:8px;z-index:9999;font:11px/1.4 Consolas,monospace;color:#fff;background:rgba(45,55,65,.6);padding:2px 7px;border-radius:4px;opacity:.8;pointer-events:none;';
-  dbg.textContent = '❄ snow:on · ' + COUNT;
+  function badgeText() {
+    return '❄ on · ' + COUNT + ' · ' + Math.round(W) + '×' + Math.round(H) + ' · ' + (document.hidden ? 'HIDDEN' : 'vis') + ' · f:' + frames;
+  }
+  dbg.textContent = badgeText();
   document.body.appendChild(dbg);
+
+  requestAnimationFrame(frame);
 })();
