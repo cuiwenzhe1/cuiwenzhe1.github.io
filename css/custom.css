@@ -98,9 +98,11 @@
   backdrop-filter: blur(14px);
 }
 
-/* ===== 页脚：水墨灰调三栏 ===== */
+/* ===== 页脚：水墨灰调三栏 + 底部淡墨远山 ===== */
 #footer {
   background:
+    linear-gradient(to top, rgba(255,255,255,0) 0%, rgba(255,255,255,.92) 55%, rgba(255,255,255,.98) 80%),
+    url('/img/ink-mountains.svg') bottom center / 100% auto no-repeat,
     radial-gradient(600px 420px at 12% 8%, rgba(200, 206, 206, .4), transparent 60%),
     radial-gradient(520px 360px at 88% 15%, rgba(180, 188, 188, .3), transparent 60%),
     radial-gradient(700px 460px at 55% 110%, rgba(210, 214, 212, .42), transparent 60%),
