@@ -1,7 +1,5 @@
-/* 首页水墨飞雪 —— 仅首页运行、稀疏缓慢、轻量 Canvas 实现 */
+/* 水墨飞雪 —— 全站轻量 Canvas 下雪 */
 (function () {
-  if (window.location.pathname !== '/') return;
-
   var canvas = document.createElement('canvas');
   canvas.id = 'ink-snow';
   canvas.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:998;';
@@ -22,7 +20,7 @@
   resize();
   window.addEventListener('resize', resize);
 
-  var COUNT = W >= 768 ? 80 : 30;
+  var COUNT = W >= 768 ? 90 : 35;
   var flakes = [];
 
   function makeFlake(atTop) {
@@ -30,14 +28,14 @@
     return {
       x: Math.random() * W,
       y: atTop ? -Math.random() * H : Math.random() * H,
-      r: size < 0.7 ? 1.6 + Math.random() * 1.8 : 2.6 + Math.random() * 2.0,
+      r: size < 0.7 ? 2.0 + Math.random() * 2.2 : 3.0 + Math.random() * 2.6,
       star: size >= 0.7,
       vy: 0.4 + Math.random() * 1.0,
       vx: (Math.random() - 0.5) * 0.3,
       ph: Math.random() * Math.PI * 2,
       w: 0.4 + Math.random() * 0.8,
       sway: 0.2 + Math.random() * 0.5,
-      o: 0.7 + Math.random() * 0.3
+      o: 0.85 + Math.random() * 0.15
     };
   }
 
@@ -50,7 +48,7 @@
     }
     ctx.strokeStyle = color;
     ctx.globalAlpha = alpha;
-    ctx.lineWidth = Math.max(0.8, f.r * 0.55);
+    ctx.lineWidth = Math.max(1.0, f.r * 0.6);
     ctx.stroke();
     ctx.globalAlpha = 1;
   }
@@ -69,23 +67,34 @@
       var f = flakes[i];
       f.y += f.vy * dt;
       f.x += f.vx * dt + Math.sin(now / 1600 * f.w + f.ph) * f.sway * dt;
-      if (f.y > H + 4) f = flakes[i] = makeFlake(false);
+      if (f.y > H + 6) f = flakes[i] = makeFlake(false);
 
       if (f.star) {
-        drawStar(f, 1.5, 1.6, 'rgba(96,110,124,' + (f.o * 0.7) + ')', 1);
+        drawStar(f, 1.5, 1.6, 'rgba(70,85,102,' + (f.o * 0.5) + ')', 1);
         drawStar(f, 0, 0, 'rgba(255,255,255,' + f.o + ')', 1);
       } else {
         ctx.beginPath();
-        ctx.arc(f.x + 1.5, f.y + 1.6, f.r + 0.6, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(96,110,124,' + (f.o * 0.7) + ')';
+        ctx.arc(f.x + 1.2, f.y + 1.3, f.r + 0.4, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(70,85,102,' + (f.o * 0.35) + ')';
         ctx.fill();
         ctx.beginPath();
         ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255,255,255,' + f.o + ')';
         ctx.fill();
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(70,85,102,' + (f.o * 0.55) + ')';
+        ctx.lineWidth = 1.3;
+        ctx.stroke();
       }
     }
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+
+  var dbg = document.createElement('div');
+  dbg.id = 'ink-snow-dbg';
+  dbg.style.cssText = 'position:fixed;right:8px;bottom:8px;z-index:9999;font:11px/1.4 Consolas,monospace;color:#fff;background:rgba(45,55,65,.6);padding:2px 7px;border-radius:4px;opacity:.8;pointer-events:none;';
+  dbg.textContent = '❄ snow:on · ' + COUNT;
+  document.body.appendChild(dbg);
 })();
