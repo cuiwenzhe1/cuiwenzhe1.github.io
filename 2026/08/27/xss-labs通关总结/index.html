@@ -1,0 +1,450 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>XSS-labs 20关通关总结 | cwzbb's blog</title><meta name="author" content="Cui wenzhe"><meta name="copyright" content="Cui wenzhe"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="XSS-labs 是本地 phpstudy 环境的反射型 XSS专项靶场，闯关判定：靶场重写了 window.alert，只要触发 alert() 就自动跳转下一关。做完 SQL-labs 再来做这个，上手很快——很多关卡的思路本质就是”闭合原语句，插入 payload”。 这篇文章主要按防御手法把 20 关串一遍。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="XSS-labs 20关通关总结">
+<meta property="og:url" content="http://example.com/2026/08/27/xss-labs%E9%80%9A%E5%85%B3%E6%80%BB%E7%BB%93/index.html">
+<meta property="og:site_name" content="cwzbb&#39;s blog">
+<meta property="og:description" content="XSS-labs 是本地 phpstudy 环境的反射型 XSS专项靶场，闯关判定：靶场重写了 window.alert，只要触发 alert() 就自动跳转下一关。做完 SQL-labs 再来做这个，上手很快——很多关卡的思路本质就是”闭合原语句，插入 payload”。 这篇文章主要按防御手法把 20 关串一遍。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/img/yasuo-cover.jpg">
+<meta property="article:published_time" content="2026-08-26T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-08-27T02:11:12.750Z">
+<meta property="article:author" content="Cui wenzhe">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="XSS">
+<meta property="article:tag" content="靶场">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/img/yasuo-cover.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "XSS-labs 20关通关总结",
+  "url": "http://example.com/2026/08/27/xss-labs%E9%80%9A%E5%85%B3%E6%80%BB%E7%BB%93/",
+  "image": "http://example.com/img/yasuo-cover.jpg",
+  "datePublished": "2026-08-26T16:00:00.000Z",
+  "dateModified": "2026-08-27T02:11:12.750Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Cui wenzhe",
+      "url": "http://example.com"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/touxiang.jpg"><link rel="canonical" href="http://example.com/2026/08/27/xss-labs%E9%80%9A%E5%85%B3%E6%80%BB%E7%BB%93/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.7.0"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        const data = { value }
+
+        if (ttl != null) {
+          data.expiry = Date.now() + ttl * 86400000
+        }
+
+        localStorage.setItem(key, JSON.stringify(data))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return
+
+        try {
+          const data = JSON.parse(itemStr)
+
+          if (data.expiry && Date.now() > data.expiry) {
+            localStorage.removeItem(key)
+            return
+          }
+
+          return data.value
+        } catch {
+          localStorage.removeItem(key)
+        }
+      }
+    }
+
+    const scriptCache = new Map()
+    const cssCache = new Map()
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => {
+        if (scriptCache.has(url)) {
+          return scriptCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+
+          script.src = url
+          script.async = true
+
+          for (const key in attr) {
+            script.setAttribute(key, attr[key])
+          }
+
+          script.onload = resolve
+          script.onerror = reject
+
+          document.head.appendChild(script)
+        })
+
+        scriptCache.set(url, promise)
+
+        return promise
+      },
+      getCSS: (url, id) => {
+        if (cssCache.has(url)) {
+          return cssCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+
+          link.rel = 'stylesheet'
+          link.href = url
+
+          if (id) {
+            link.id = id
+          }
+
+          link.onload = resolve
+          link.onerror = reject
+
+          document.head.appendChild(link)
+        })
+
+        cssCache.set(url, promise)
+
+        return promise
+      },
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      const activateDarkMode = () => {
+        document.documentElement.dataset.theme = 'dark'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.dataset.theme = 'light'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'XSS-labs 20关通关总结',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.css"><meta name="generator" content="Hexo 8.1.2"></head><body><div class="bg-animation" id="web_bg" style="background-image: url(/img/bf1.jpg);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/touxiang.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">3</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">4</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/shuoshuo/"><i class="fa-fw fas fa-comment-dots"></i><span> 说说</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/projects/"><i class="fa-fw fas fa-code"></i><span> 项目</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/yasuo-cover.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">cwzbb's blog</span></a><a class="nav-page-title" href="/"><span class="site-name">XSS-labs 20关通关总结</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/shuoshuo/"><i class="fa-fw fas fa-comment-dots"></i><span> 说说</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/projects/"><i class="fa-fw fas fa-code"></i><span> 项目</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">XSS-labs 20关通关总结</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-08-26T16:00:00.000Z" title="发表于 2026-08-27 00:00:00">2026-08-27</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-08-27T02:11:12.750Z" title="更新于 2026-08-27 10:11:12">2026-08-27</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E7%BD%91%E5%AE%89%E5%AD%A6%E4%B9%A0/">网安学习</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>XSS-labs 是本地 phpstudy 环境的反射型 XSS专项靶场，闯关判定：靶场重写了 <code>window.alert</code>，只要触发 <code>alert()</code> 就自动跳转下一关。做完 SQL-labs 再来做这个，上手很快——很多关卡的思路本质就是”闭合原语句，插入 payload”。</p>
+<p>这篇文章主要按防御手法把 20 关串一遍。</p>
+<span id="more"></span>
+
+<h2 id="无过滤与属性注入（L1–L4）"><a href="#无过滤与属性注入（L1–L4）" class="headerlink" title="无过滤与属性注入（L1–L4）"></a>无过滤与属性注入（L1–L4）</h2><p><strong>L1</strong>：<code>$_GET[&quot;name&quot;]</code> 直接 echo 出来，零过滤。<code>&lt;script&gt;alert(1)&lt;/script&gt;</code> 直接过。</p>
+<p><strong>L2</strong>：输出点移到了 <code>&lt;input value=&quot;...&quot;&gt;</code> 里。h2 部分用了 <code>htmlspecialchars</code>，但拼 value 时忘了过滤。<code>&quot;&gt;</code> 闭合属性再插标签即可：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&quot;&gt;&lt;script&gt;alert(&#x27;xss&#x27;)&lt;/script&gt;</span><br></pre></td></tr></table></figure>
+
+<p><strong>L3</strong>：两处都加了 <code>htmlspecialchars</code>，但它默认 <code>ENT_COMPAT</code> 模式——<strong>只转义双引号，不转义单引号</strong>。而 value 恰好是单引号包裹的，等于没防：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#x27; onclick=alert(&quot;xss&quot;) &#x27;</span><br></pre></td></tr></table></figure>
+
+<p>注意闭合后要有空格分隔新属性。</p>
+<p><strong>L4</strong>：用 <code>str_replace</code> 把 <code>&lt;</code> <code>&gt;</code> 删了，想让攻击者造不了新标签。但属性注入根本不需要尖括号：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&quot;onfocus=alert(1) autofocus=&quot;</span><br></pre></td></tr></table></figure>
+
+<p>闭合 value 之后全是新属性，<code>autofocus</code> 自动聚焦触发 <code>onfocus</code>。</p>
+<h2 id="过滤绕过（L5–L9）"><a href="#过滤绕过（L5–L9）" class="headerlink" title="过滤绕过（L5–L9）"></a>过滤绕过（L5–L9）</h2><p><strong>L5</strong>：过滤了 <code>on</code> 开头的事件。换 <code>&lt;a&gt;</code> 标签 + <code>javascript:</code> 伪协议：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&quot;&gt; &lt;a href=javascript:alert(1)&gt;x&lt;/a&gt;</span><br></pre></td></tr></table></figure>
+
+<p><strong>L6</strong>：过滤了 <code>href</code>、<code>script</code> 等关键字，但<strong>没加 <code>strtolower</code></strong>——黑名单是大小写敏感的，直接大小写绕过：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&quot;&gt;&lt;SCRIPT&gt;alert(1)&lt;/SCRIPT&gt;</span><br></pre></td></tr></table></figure>
+
+<p>教训：防御不一定逐关递增，前一关有的防护（L5 有 <code>strtolower</code>）后一关可能没配。测每一关都要重新确认过滤逻辑。</p>
+<p><strong>L7</strong>：<code>str_replace</code> 把 <code>script</code>、<code>on</code>、<code>src</code>、<code>href</code> 替换成空——但<strong>只替换一次</strong>，双写绕过（和 SQL 注入同理）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&quot;&gt;&lt;scrscriptipt&gt;alert(&#x27;xss&#x27;)&lt;/scrscriptipt&gt;</span><br></pre></td></tr></table></figure>
+
+<p><code>oonn</code>、<code>hrhrefef</code> 同理。条件：一次性替换且替换值为空。</p>
+<p><strong>L8</strong>：友情链接的 href 可控，但 <code>javascript:</code> 被字面匹配过滤。关键在于：<strong>过滤发生在 PHP 字符串层面，执行发生在浏览器解析之后</strong>——浏览器对属性值会先做 HTML 实体解码。实体编码绕过：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">javas&amp;#99;ript:alert(1)</span><br></pre></td></tr></table></figure>
+
+<p><strong>L9</strong>：在 L8 基础上加了 <code>strpos($str,&#39;http://&#39;)</code> 检查，必须包含 <code>http://</code> 字样。但 <code>strpos</code> 只查包含、不查协议。带上 <code>http://</code> 字样，再用 <code>//</code> 把它变成 JS 行注释：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">javas&amp;#99;ript:alert(1)//http://</span><br></pre></td></tr></table></figure>
+
+<h2 id="隐藏输入框与-HTTP-头注入（L10–L13）"><a href="#隐藏输入框与-HTTP-头注入（L10–L13）" class="headerlink" title="隐藏输入框与 HTTP 头注入（L10–L13）"></a>隐藏输入框与 HTTP 头注入（L10–L13）</h2><p><strong>L10</strong>：三个 hidden 的 input，只有 <code>t_sort</code> 可控。利用 <strong>HTML 解析器对重复属性只取第一个</strong>，注入 <code>type</code> 覆盖 hidden，再补事件：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">test&amp;t_sort=&quot; type=text onfocus=alert(1) &quot;</span><br></pre></td></tr></table></figure>
+
+<p><strong>L11–L13</strong>：没有输入框提示，看源码发现注入点在 HTTP 头里——Referer（L11）、User-Agent（L12）、Cookie（L13），都没过滤且回显到前端。思路就是：真实场景下不知道源码，就把可能回显的头注入点<strong>挨个试</strong>。L13 只过滤了 <code>&lt;&gt;</code>，属性注入照样过。</p>
+<h2 id="特殊上下文（L14–L17）"><a href="#特殊上下文（L14–L17）" class="headerlink" title="特殊上下文（L14–L17）"></a>特殊上下文（L14–L17）</h2><p><strong>L14</strong>：EXIF 图片信息触发 XSS，原靶场外站环境已失效，跳过。</p>
+<p><strong>L15</strong>：页面用了 AngularJS，<code>ng-include</code> 会引入外部 HTML。利用 src 参数让它包含一个带恶意脚本的页面（用本站的 L1 当”恶意文件”）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">level15.php?src=&#x27;level1.php?name=&lt;img src=1 onerror=alert(1)&gt;&#x27;</span><br></pre></td></tr></table></figure>
+
+<p><strong>L16</strong>：<code>script</code>、空格、<code>/</code> 全被替换成 <code>&amp;nbsp;</code>。用 URL 编码 <code>%0A</code>（换行符）代替空格分隔属性，配合不需要 <code>/</code> 的标签：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?keyword=&lt;svg%0Aonload=alert()&gt;</span><br></pre></td></tr></table></figure>
+
+<p><strong>L17</strong>：参数注入到 <code>&lt;embed&gt;</code> 标签属性里，加空格插入事件即可：<code>%20onmouseover=alert()</code>。</p>
+<p><strong>L18–L20</strong>：Flash 相关，已淘汰，不做。</p>
+<h2 id="防御演进复盘"><a href="#防御演进复盘" class="headerlink" title="防御演进复盘"></a>防御演进复盘</h2><table>
+<thead>
+<tr>
+<th>防御手法</th>
+<th>关卡</th>
+<th>绕过思路</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>无过滤</td>
+<td>L1</td>
+<td>直接插 <code>&lt;script&gt;</code></td>
+</tr>
+<tr>
+<td>部分过滤（漏了属性点）</td>
+<td>L2</td>
+<td>闭合 value</td>
+</tr>
+<tr>
+<td><code>htmlspecialchars</code> 默认模式</td>
+<td>L3</td>
+<td>单引号没转义，照样闭合</td>
+</tr>
+<tr>
+<td>删 <code>&lt;&gt;</code></td>
+<td>L4、L13</td>
+<td>属性注入不需要尖括号</td>
+</tr>
+<tr>
+<td>黑名单关键字</td>
+<td>L5</td>
+<td>换标签&#x2F;换协议</td>
+</tr>
+<tr>
+<td>黑名单但无 <code>strtolower</code></td>
+<td>L6</td>
+<td>大小写</td>
+</tr>
+<tr>
+<td>单次 <code>str_replace</code> 置空</td>
+<td>L7</td>
+<td>双写</td>
+</tr>
+<tr>
+<td>字面匹配协议名</td>
+<td>L8、L9</td>
+<td>HTML 实体编码 + <code>//</code> 注释骗检查</td>
+</tr>
+<tr>
+<td>隐藏输入框</td>
+<td>L10–L13</td>
+<td>重复属性只取第一个；头注入挨个试</td>
+</tr>
+<tr>
+<td>过滤空格&#x2F;斜杠</td>
+<td>L16</td>
+<td><code>%0A</code> 等空白符替代</td>
+</tr>
+</tbody></table>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><ol>
+<li><strong>XSS 的核心是上下文</strong>：同样的输入，在标签体、属性值、JS 字符串、URL 里，利用方式完全不同。先看输出点在哪，再想怎么闭合。</li>
+<li><strong>黑名单</strong>：大小写、双写、实体编码、空白符变体，多试几个。正确姿势是白名单 + 输出编码，或者直接用 React&#x2F;Vue 这类自带转义的框架（课设里用过，原理待补）。</li>
+<li>这个靶场与sql-lab相同教学性质很强，更像在告诉你”这里不过滤就有洞”。真实场景要自己 fuzz 找输出点。</li>
+</ol>
+<p>下一步：PortSwigger Web Security Academy 的 XSS 模块（30+ lab），补 DOM 型 XSS、CSP 绕过这些更深的方向。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://example.com">Cui wenzhe</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://example.com/2026/08/27/xss-labs%E9%80%9A%E5%85%B3%E6%80%BB%E7%BB%93/">http://example.com/2026/08/27/xss-labs%E9%80%9A%E5%85%B3%E6%80%BB%E7%BB%93/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://example.com" target="_blank">cwzbb's blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/XSS/">XSS</a><a class="post-meta__tags" href="/tags/%E9%9D%B6%E5%9C%BA/">靶场</a><a class="post-meta__tags" href="/tags/Web%E5%AE%89%E5%85%A8/">Web安全</a></div><div class="post-share"><div class="social-share" data-image="/img/yasuo-cover.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/08/12/%E6%88%91%E7%9A%84%E7%AC%AC%E4%B8%80%E7%AF%87%E6%96%87%E7%AB%A0/" title="我的第一篇文章"><img class="cover" src="/img/yasuo-cover.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">我的第一篇文章</div></div><div class="info-2"><div class="info-item-1">创建博客想搭建一个个人博客很久了，苦于一直没有时间，恰逢暑假居家心血来潮，动手做了起来，基于hexo和butterfly的一个简易的个人博客就建好了，以后的学习，生活会定期发布在这上面，算是对自己的一种记录，也欢迎朋友们来参观，交流。搭建期间感谢xhxbb的《灵感提供》，在此放上友链：xhxbb1.github.io最后以一句话结尾吧：吵闹的都市里，总需要于一方自留地中，视真我。感谢。 </div></div></div></a></nav><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="giscus-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/touxiang.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Cui wenzhe</div><div class="author-info-description">now you can see me</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">3</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">4</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/cuiwenzhe1"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/cuiwenzhe1" target="_blank" title="GitHub"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="https://weixin.qq.com" target="_blank" title="微信"><i class="fab fa-weixin" style="color: #07C160;"></i></a><a class="social-icon" href="https://space.bilibili.com/3493093733042245" target="_blank" title="B站"><i class="fab fa-bilibili" style="color: #fb7299;"></i></a><a class="social-icon" href="https://blog.csdn.net/cwz0528" target="_blank" title="CSDN"><i class="fas fa-laptop-code" style="color: #e40008;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%97%A0%E8%BF%87%E6%BB%A4%E4%B8%8E%E5%B1%9E%E6%80%A7%E6%B3%A8%E5%85%A5%EF%BC%88L1%E2%80%93L4%EF%BC%89"><span class="toc-number">1.</span> <span class="toc-text">无过滤与属性注入（L1–L4）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%BF%87%E6%BB%A4%E7%BB%95%E8%BF%87%EF%BC%88L5%E2%80%93L9%EF%BC%89"><span class="toc-number">2.</span> <span class="toc-text">过滤绕过（L5–L9）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%9A%90%E8%97%8F%E8%BE%93%E5%85%A5%E6%A1%86%E4%B8%8E-HTTP-%E5%A4%B4%E6%B3%A8%E5%85%A5%EF%BC%88L10%E2%80%93L13%EF%BC%89"><span class="toc-number">3.</span> <span class="toc-text">隐藏输入框与 HTTP 头注入（L10–L13）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%89%B9%E6%AE%8A%E4%B8%8A%E4%B8%8B%E6%96%87%EF%BC%88L14%E2%80%93L17%EF%BC%89"><span class="toc-number">4.</span> <span class="toc-text">特殊上下文（L14–L17）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%98%B2%E5%BE%A1%E6%BC%94%E8%BF%9B%E5%A4%8D%E7%9B%98"><span class="toc-number">5.</span> <span class="toc-text">防御演进复盘</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">6.</span> <span class="toc-text">总结</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/08/27/xss-labs%E9%80%9A%E5%85%B3%E6%80%BB%E7%BB%93/" title="XSS-labs 20关通关总结"><img src="/img/yasuo-cover.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="XSS-labs 20关通关总结"/></a><div class="content"><a class="title" href="/2026/08/27/xss-labs%E9%80%9A%E5%85%B3%E6%80%BB%E7%BB%93/" title="XSS-labs 20关通关总结">XSS-labs 20关通关总结</a><time datetime="2026-08-26T16:00:00.000Z" title="发表于 2026-08-27 00:00:00">2026-08-27</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/08/12/%E6%88%91%E7%9A%84%E7%AC%AC%E4%B8%80%E7%AF%87%E6%96%87%E7%AB%A0/" title="我的第一篇文章"><img src="/img/yasuo-cover.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="我的第一篇文章"/></a><div class="content"><a class="title" href="/2026/08/12/%E6%88%91%E7%9A%84%E7%AC%AC%E4%B8%80%E7%AF%87%E6%96%87%E7%AB%A0/" title="我的第一篇文章">我的第一篇文章</a><time datetime="2026-08-12T07:00:48.000Z" title="发表于 2026-08-12 15:00:48">2026-08-12</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/08/11/hello-world/" title="Hello World"><img src="/img/yasuo-cover.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Hello World"/></a><div class="content"><a class="title" href="/2026/08/11/hello-world/" title="Hello World">Hello World</a><time datetime="2026-08-11T07:15:14.798Z" title="发表于 2026-08-11 15:15:14">2026-08-11</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-info-row"><div class="footer-info-col footer-info-left"><div class="footer-info-item"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a></div><div class="footer-info-item"><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.7.0</a></div></div><div class="footer-info-col footer-info-center"><div class="footer-info-item"><span>本站已运行</span><span id="site-runtime"></span></div><div class="footer-info-item"><span>文章数</span><span id="site-post-count">3</span></div><div class="footer-info-item"><span class="copyright">&copy;&nbsp;2025 - 2026 By Cui wenzhe</span><span class="footer-heart">♥</span></div></div><div class="footer-info-col footer-info-right"><div class="footer-info-item"><span>访客</span><span id="busuanzi_value_site_uv"></span></div><div class="footer-info-item"><span>浏览</span><span id="busuanzi_value_site_pv"></span></div></div></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.7.0"></script><script src="/js/main.js?v=5.7.0"></script><div class="js-pjax"><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = {"data-lang":"zh-CN"}
+
+  const getGiscusTheme = theme => theme === 'dark' ? 'dark' : 'light'
+
+  const createScriptElement = config => {
+    const ele = document.createElement('script')
+    Object.entries(config).forEach(([key, value]) => {
+      ele.setAttribute(key, value)
+    })
+    return ele
+  }
+
+  const loadGiscus = (el = document, key) => {
+    const mappingConfig = isShuoshuo
+      ? { 'data-mapping': 'specific', 'data-term': key }
+      : { 'data-mapping': (option && option['data-mapping']) || 'pathname' }
+
+    const giscusConfig = {
+      src: 'https://giscus.app/client.js',
+      'data-repo': 'cuiwenzhe1/cuiwenzhe1.github.io',
+      'data-repo-id': 'R_kgDOT00yFQ',
+      'data-category-id': 'DIC_kwDOT00yFc4DDMlI',
+      'data-theme': getGiscusTheme(document.documentElement.getAttribute('data-theme')),
+      'data-reactions-enabled': '1',
+      crossorigin: 'anonymous',
+      async: true,
+      ...option,
+      ...mappingConfig
+    }
+
+    const scriptElement = createScriptElement(giscusConfig)
+
+    el.querySelector('#giscus-wrap').appendChild(scriptElement)
+
+    if (isShuoshuo) {
+      window.shuoshuoComment.destroyGiscus = () => {
+        if (el.children.length) {
+          el.innerHTML = ''
+          el.classList.add('no-comment')
+        }
+      }
+    }
+  }
+
+  const changeGiscusTheme = theme => {
+    const iframe = document.querySelector('#giscus-wrap iframe')
+    if (iframe) {
+      const message = {
+        giscus: {
+          setConfig: {
+            theme: getGiscusTheme(theme)
+          }
+        }
+      }
+      iframe.contentWindow.postMessage(message, 'https://giscus.app')
+    }
+  }
+
+  btf.addGlobalFn('themeChange', changeGiscusTheme, 'giscus')
+
+  if (isShuoshuo) {
+    'Giscus' === 'Giscus'
+      ? window.shuoshuoComment = { loadComment: loadGiscus }
+      : window.loadOtherComment = loadGiscus
+    return
+  }
+
+  if ('Giscus' === 'Giscus' || !false) {
+    if (false) btf.loadComment(document.getElementById('giscus-wrap'), loadGiscus)
+    else loadGiscus()
+  } else {
+    window.loadOtherComment = loadGiscus
+  }
+})()</script></div><script src="/js/snow.js?v=8"></script><script src="/js/busuanzi-fix.js?v=1"></script><script src="https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.js"></script><script>window.meting_api = 'https://api.injahow.cn/meting/?server=:server&type=:type&id=:id';</script><script src="https://cdn.jsdelivr.net/npm/meting@2.0.1/dist/Meting.min.js"></script><div id="ink-player" class="ink-player"><div class="ink-player-head"><span class="ink-player-title" id="ink-song-title">正在加载…</span><span class="ink-player-hint">≋</span></div><meting-js server="tencent" type="playlist" id="9762369050" list-folded="true" order="random" theme="#1d1d1f" preload="auto" autoplay="false" lock="true"></meting-js></div><script src="/js/aplayer-drag.js"></script><script src="/js/typewriter.js" data-pjax></script><script src="/js/siteinfo.js" data-pjax></script><script src="https://cdn.jsdelivr.net/npm/pjax@0.2.8/pjax.min.js" defer="defer"></script><script>document.addEventListener('DOMContentLoaded', () => {
+  const pjaxSelectors = ["meta[property=\"og:image\"]","meta[property=\"og:title\"]","meta[property=\"og:url\"]","meta[property=\"og:description\"]","link[rel=\"canonical\"]","head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"]):not([data-fancybox])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => {
+      try {
+        fn()
+      } catch (err) {
+        console.debug('Pjax callback failed:', err)
+      }
+    })
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      if (!item.parentNode) return
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || ''
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    const responseURL = e.request && e.request.responseURL
+    if (e.request && e.request.status === 404) {
+      false
+        ? pjax.loadUrl('/404.html')
+        : responseURL && (window.location.href = responseURL)
+    } else if (responseURL) {
+      window.location.href = responseURL
+    }
+  })
+})</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
