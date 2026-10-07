@@ -311,8 +311,22 @@ body:has(#body-wrap.type-about) #web_bg {
   width: 100%;
 }
 
+/* 放开外层容器的宽度限制，让"晾衣绳"能横跨整页。
+   原来是 #content-inner(max-width:1000px) + #page(padding:0 40px) 两层夹到 890px。
+   卡片宽度改用 .about-page 的 max-width 单独锁住，视觉上跟改之前一致。 */
+#body-wrap.type-about #content-inner {
+  max-width: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+#body-wrap.type-about #page {
+  padding-left: 0;
+  padding-right: 0;
+}
+
 #body-wrap.type-about .about-page {
-  max-width: 1000px;
+  max-width: 890px;   /* 改前实际可用宽度也是 890（1000 被上层内边距夹掉），保持卡片原样 */
   width: 100%;
   margin: 0 auto;
   padding: 24px 16px 60px;
@@ -1165,4 +1179,209 @@ body:has(#body-wrap.type-shuoshuo) #web_bg {
   letter-spacing: .1em;
   line-height: 1.5;
   vertical-align: 2px;
+}
+
+/* ===== 关于页：晾衣绳照片墙（两条绳 · 麻绳质感 · 满页横跨 · 远近交错）=====
+   结构：.about-line-zone > .about-line(.about-line-far/-near) > .about-line-row > figure.about-line-photo
+   位置：-zone 放在 .about-page 外面（.about-page 最宽 1000px，塞在里面绳子铺不满整页）。
+   照片：放 source/img/about/，按 1~6.jpg 替换即可。纯 CSS、无 JS，pjax 与 prefers-reduced-motion 都不受影响。 */
+#body-wrap.type-about .about-line-zone {
+  position: relative;
+  z-index: 5;                 /* 前景层：压在下方头像卡之上 */
+  width: 100%;
+  margin: 0 0 -30px;          /* 负下边距：照片下缘搭在卡片上，不额外撑高页面 */
+  padding: 6px 0 0;
+}
+
+/* 一条绳：满宽，只负责画绳子；照片的分布交给里面的 .about-line-row */
+#body-wrap.type-about .about-line {
+  --sag: 52px;                /* 绳子下垂量 */
+  --photo-w: 150px;           /* 照片宽度 */
+  --pad: 8px;                 /* 相纸白边 */
+  --clip-w: 12px;             /* 夹子宽 */
+  --clip-h: 34px;             /* 夹子高 */
+  position: relative;
+}
+
+/* 绳子本体：border-bottom 画弧，5px 粗的暖调麻绳 */
+#body-wrap.type-about .about-line::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--sag) + 8px);
+  border-bottom: 5px solid #8b7d68;
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .3));
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* 麻绳的拧股纹理：同一道弧上叠一层斜向条纹，切出麻绳的沟槽 */
+#body-wrap.type-about .about-line::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--sag) + 8px);
+  border-bottom: 5px solid rgba(56, 44, 28, .42);
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  -webkit-mask-image: repeating-linear-gradient(80deg, transparent 0 4px, #000 4px 7px);
+  mask-image: repeating-linear-gradient(80deg, transparent 0 4px, #000 4px 7px);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* 照片分布带：绳子满宽，这条带子决定照片聚在多宽的范围里 */
+#body-wrap.type-about .about-line-row {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin: 0 auto;
+}
+
+/* 远绳：照片带窄、照片小 */
+#body-wrap.type-about .about-line-far .about-line-row {
+  width: 54%;
+}
+
+/* 近绳：照片带宽、照片大，向上叠一点形成交错 */
+#body-wrap.type-about .about-line-near {
+  --sag: 68px;
+  --photo-w: 214px;
+  --pad: 11px;
+  --clip-w: 16px;
+  --clip-h: 44px;
+  margin-top: -22px;
+}
+
+#body-wrap.type-about .about-line-near .about-line-row {
+  width: 72%;
+}
+
+/* 单张放大：横版照片（远绳 1、2，近绳 5）等比放大 15%。
+   只覆盖 --photo-w（相框宽），照片靠 max-width:100% 等比跟着放大，比例不变。
+   注意 --photo-w 是按绳共享的变量，不做覆盖会连带同绳其他照片一起变。 */
+@media (min-width: 769px) {
+  #body-wrap.type-about .about-line-far .about-line-photo:nth-of-type(1),
+  #body-wrap.type-about .about-line-far .about-line-photo:nth-of-type(2) {
+    --photo-w: 172px;
+  }
+  #body-wrap.type-about .about-line-near .about-line-photo:nth-of-type(2) {
+    --photo-w: 246px;
+  }
+}
+
+/* 相片本体：白边 + 加宽下沿（相纸质感） */
+#body-wrap.type-about .about-line-photo {
+  position: relative;
+  z-index: 1;                          /* 盖住绳子 */
+  flex: 0 0 auto;
+  width: var(--photo-w);
+  margin: calc(var(--sag) * .5) 0 0;   /* 两端照片挂得高一些 */
+  padding: var(--pad) var(--pad) calc(var(--pad) * 3);
+  background: linear-gradient(158deg, #fffdf8 0%, #f4f1ea 100%);
+  border-radius: 2px;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, .3), 0 2px 8px rgba(0, 0, 0, .15);
+  transform-origin: 50% -10px;         /* 以夹子为轴心，摆动更自然 */
+  transition: transform .35s ease, box-shadow .35s ease, filter .35s ease;
+}
+
+/* 中间那张挂在绳子的最低点 */
+#body-wrap.type-about .about-line-photo:nth-of-type(2) {
+  margin-top: var(--sag);
+}
+
+/* 照片按自身比例显示：横版铺满相纸内宽，竖版自然变高（相框跟着竖），不裁剪、不拉伸。
+   max-width/max-height 同时约束 + width/height 都为 auto = 等比缩放，
+   只有极端长图（如 9:16 截图）才会触发高度上限，此时照片缩到上限并水平居中，两侧留相纸白边。 */
+#body-wrap.type-about .about-line-photo img {
+  display: block;
+  margin: 0 auto;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: calc(var(--photo-w) * 1.45);
+  border-radius: 1px;
+  background: #e6e3dc;
+}
+
+/* 远近层次：远绳降亮度 + 轻微虚化（景深感），影子收小 */
+#body-wrap.type-about .about-line-far .about-line-photo {
+  filter: brightness(.86) saturate(.82) blur(.4px);
+  box-shadow: 0 9px 18px rgba(0, 0, 0, .2), 0 1px 3px rgba(0, 0, 0, .1);
+}
+
+/* 每张的初始倾斜，错开角度 */
+#body-wrap.type-about .about-line-far .about-line-photo:nth-of-type(1) { transform: rotate(-3deg); }
+#body-wrap.type-about .about-line-far .about-line-photo:nth-of-type(2) { transform: rotate(2deg); }
+#body-wrap.type-about .about-line-far .about-line-photo:nth-of-type(3) { transform: rotate(-2deg); }
+#body-wrap.type-about .about-line-near .about-line-photo:nth-of-type(1) { transform: rotate(3deg); }
+#body-wrap.type-about .about-line-near .about-line-photo:nth-of-type(2) { transform: rotate(-2.5deg); }
+#body-wrap.type-about .about-line-near .about-line-photo:nth-of-type(3) { transform: rotate(2deg); }
+
+/* hover：摆正 + 上浮 + 放大，影子加深 */
+#body-wrap.type-about .about-line-photo:hover {
+  transform: rotate(0deg) translateY(-10px) scale(1.06);
+  filter: none;
+  z-index: 6;
+  box-shadow: 0 26px 50px rgba(0, 0, 0, .38), 0 6px 14px rgba(0, 0, 0, .2);
+}
+
+/* 木夹子：一半压在相片上沿，一半咬住绳子 */
+#body-wrap.type-about .about-line-clip {
+  position: absolute;
+  top: calc(var(--clip-h) / -2);
+  left: 50%;
+  width: var(--clip-w);
+  height: var(--clip-h);
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: linear-gradient(180deg, #cbb08a 0%, #b8956b 46%, #a07f57 54%, #cbb08a 100%);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .32), inset 0 0 0 1px rgba(255, 255, 255, .22);
+}
+
+/* 夹子上的金属弹簧 */
+#body-wrap.type-about .about-line-clip::after {
+  content: '';
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: calc(var(--clip-h) * .4);
+  height: calc(var(--clip-h) * .13);
+  border-radius: 2px;
+  background: linear-gradient(180deg, #8a8a8d 0%, #d2d2d5 55%, #77777a 100%);
+}
+
+@media (max-width: 768px) {
+  #body-wrap.type-about .about-line-zone {
+    margin-bottom: -20px;
+    padding: 6px 0 0;
+  }
+  #body-wrap.type-about .about-line-far {
+    --sag: 34px;
+    --photo-w: 72px;
+    --pad: 4px;
+    --clip-w: 8px;
+    --clip-h: 20px;
+  }
+  #body-wrap.type-about .about-line-far .about-line-row { width: 68%; }
+  #body-wrap.type-about .about-line-near {
+    --sag: 42px;
+    --photo-w: 96px;
+    --pad: 5px;
+    --clip-w: 10px;
+    --clip-h: 26px;
+    margin-top: -12px;
+  }
+  #body-wrap.type-about .about-line-near .about-line-row { width: 86%; }
+  /* 同三张横版照片在手机端等比放大（72→82 / 96→112） */
+  #body-wrap.type-about .about-line-far .about-line-photo:nth-of-type(1),
+  #body-wrap.type-about .about-line-far .about-line-photo:nth-of-type(2) { --photo-w: 82px; }
+  #body-wrap.type-about .about-line-near .about-line-photo:nth-of-type(2) { --photo-w: 112px; }
+  #body-wrap.type-about .about-line::before,
+  #body-wrap.type-about .about-line::after { border-bottom-width: 4px; }
 }
