@@ -1,103 +1,30 @@
-# cwzbb's blog — 水墨主题个人博客
+# cuiwenzhe1.github.io
 
-一个基于 **Hexo + Butterfly** 搭建的个人博客，采用「水墨」风格设计：墨色山峦、淡墨远山、雪落无声。剑来！！
+> ⚠️ **这是自动生成的部署产物，请勿直接修改本仓库的任何文件。**
+> 你在这里做的改动会在下一次部署时被完全覆盖。
 
-🔗 在线地址：<https://cuiwenzhe1.github.io>
+## 这个仓库是什么
 
-> 本仓库为 GitHub Pages 部署产物（由 `hexo d -g` 自动生成并推送），博客源码位于本地，包含自定义主题样式、JavaScript 特效与页面模板。
+这是 [cwzbb's blog](https://cuiwenzhe1.github.io) 的**构建产物**——由 Hexo 把 Markdown、模板、样式编译成的静态 HTML / CSS / 图片。
 
-## ✨ 功能亮点
+它的内容全部由博客**源码仓库**自动生成：
 
-- **水墨风格设计** — 自定义 `custom.css` 覆盖 Butterfly 主题：墨色底纹背景、磨砂卡片、淡墨远山 SVG 页脚
-- **下雪特效** — 纯 Canvas 实现的 `snow.js`（无依赖），右下角「❄ 雪花」按钮可开关，选择记忆在 `localStorage`
-- **打字机首页** — 首页标题逐字打出，配合墨色山水英雄图（已压缩优化，2560×1071 / 576KB）
-- **音乐播放器** — 基于 APlayer 的右下角播放器，支持拖拽、歌词显示
-- **访问统计** — busuanzi 浏览 / 访客计数，并修复了 pjax 切换页面导致计数虚增的问题
-- **giscus 评论系统** — 基于 GitHub Discussions，无需自建服务器
-- **自定义页面** — 关于 / 友链 / 项目展示页，每个页面有独立横幅图（ink / girl / dragon）
-
-## 🛠 技术栈
-
-| 类别 | 技术 |
-| --- | --- |
-| 博客框架 | [Hexo](https://hexo.io/) 8.x |
-| 主题 | [Butterfly](https://butterfly.js.org/) 5.7.0 |
-| 部署 | GitHub Pages（hexo-deployer-git，SSH） |
-| 特效 | 原生 JavaScript + Canvas（snow.js、typewriter.js） |
-| 评论 | giscus（GitHub Discussions） |
-| 统计 | busuanzi |
-
-## 📁 目录结构
-
-```text
-my_blog/
-├── _config.yml              # Hexo 主配置
-├── _config.butterfly.yml    # Butterfly 主题配置（导航、注入、评论等）
-├── source/
-│   ├── _posts/              # 文章（Markdown）
-│   ├── about/               # 关于页
-│   ├── link/                # 友链页
-│   ├── projects/            # 项目展示页
-│   ├── css/custom.css       # 水墨风格全部自定义样式
-│   ├── img/                 # 站点图片资源
-│   └── js/                  # 自定义脚本
-│       ├── snow.js          # 下雪特效
-│       ├── typewriter.js    # 打字机效果
-│       ├── busuanzi-fix.js  # 访问统计 pjax 修复
-│       ├── aplayer-drag.js  # 播放器拖拽
-│       └── siteinfo.js
-└── themes/butterfly/        # Butterfly 主题源码
+```
+源码仓库（私有）  ──push──▶  GitHub Actions  ──构建──▶  本仓库  ──▶  https://cuiwenzhe1.github.io
 ```
 
-## 🚀 本地开发
+## 想改内容？
 
-```bash
-# 安装依赖
-npm install
+**不要在这个仓库里改。** 正确做法是去改源码仓库，然后推送——本仓库会在 1–2 分钟内自动更新。
 
-# 本地预览（默认 http://localhost:4000）
-npx hexo server
+## 想回退？
 
-# 生成静态文件
-npx hexo generate
+同样在源码仓库里用 `git revert` 回退，重新部署后本仓库会同步。
 
-# 生成并部署到 GitHub Pages
-npx hexo deploy -g
-```
+## 本仓库丢失/被清空怎么办
 
-> 部署前需配置好 GitHub SSH 密钥（`~/.ssh`），`_config.yml` 中 deploy 配置为
-> `git@github.com:cuiwenzhe1/cuiwenzhe1.github.io.git`（main 分支）。
+不影响任何东西。源码仓库里重跑一次部署流程就能完整重建。**真正的数据在源码仓库，这个仓库是"成品"，随时可以重新生产。**
 
-## 🎨 自定义指南
+---
 
-- 所有外观定制集中在 `source/css/custom.css`，通过主题 inject 注入，更新主题不会丢失
-- 新增文章：`npx hexo new "文章标题"` 后编辑 `source/_posts/`
-- 新增项目卡片：复制 `source/projects/index.md` 中的注释模板
-- 页面横幅图由 front-matter 的 `top_img:` 控制；若新增页面，需在 `custom.css` 中按
-  `#body-wrap.type-xxx #page-header` 的优先级追加覆盖规则（主题默认规则带 `!important`）
-
-## 💬 说说功能
-
-随手记录，与正式文章区分。说说是 `_posts/` 下带 `shuoshuo: true` 标记的文章：**不出现在主页**（被 `scripts/index-filter.js` 过滤，分页正确）、**出现在归档**（带"说说"小标记）、有独立详情页，通过 `/shuoshuo/` 页面以卡片形式浏览。
-
-```bash
-# 发一条说说
-npx hexo new shuoshuo "标题"
-```
-
-### 主题改动清单（升级主题后需重放）
-
-以下两处为 Butterfly 主题**原文件**的直接修改，`git pull` 升级会被覆盖，升级后按此恢复：
-
-1. `themes/butterfly/layout/includes/mixins/article-sort.pug` — 第 22 行标题链接内加 `if article.shuoshuo` → 渲染"说说"badge
-2. `themes/butterfly/layout/includes/widget/card_recent_post.pug` — 第 9 行 `site.posts` 前加 `filter(p => !p.shuoshuo)`
-
-以下为新增文件，升级**不会**丢失：
-
-- `themes/butterfly/layout/shuoshuo-list.pug`（说说页模板，前端页面用 `layout: shuoshuo-list` 命中）
-- `scripts/index-filter.js`（主页过滤 generator，覆盖 hexo-generator-index）
-- `scaffolds/shuoshuo.md`、`source/shuoshuo/index.md`
-
-## 📄 License
-
-本项目仅供个人学习与展示。Hexo 与 Butterfly 主题遵循各自的开源许可。
+技术栈：Hexo 8 + Butterfly 5.7.0 · 托管于 GitHub Pages
