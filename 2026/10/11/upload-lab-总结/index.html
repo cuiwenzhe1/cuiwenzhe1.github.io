@@ -1,0 +1,442 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>upload-labs 总结 | cwzbb's blog</title><meta name="author" content="Cui wenzhe"><meta name="copyright" content="Cui wenzhe"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="前言依旧暑假期间通关的靶场，现在正好当作复习总结 Upload-Labs 是一个使用 PHP 语言编写的，专门用于学习文件上传漏洞的靶场。它包含了 21 种常见的文件上传漏洞场景，用来入门文件上传。基于靶场的练习，掌握文件上传的基本绕过方法，校验原理，以及防范措施">
+<meta property="og:type" content="article">
+<meta property="og:title" content="upload-labs 总结">
+<meta property="og:url" content="https://cuiwenzhe1.github.io/2026/10/11/upload-lab-%E6%80%BB%E7%BB%93/index.html">
+<meta property="og:site_name" content="cwzbb&#39;s blog">
+<meta property="og:description" content="前言依旧暑假期间通关的靶场，现在正好当作复习总结 Upload-Labs 是一个使用 PHP 语言编写的，专门用于学习文件上传漏洞的靶场。它包含了 21 种常见的文件上传漏洞场景，用来入门文件上传。基于靶场的练习，掌握文件上传的基本绕过方法，校验原理，以及防范措施">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cuiwenzhe1.github.io/img/yasuo-cover.jpg">
+<meta property="article:published_time" content="2026-10-11T13:19:18.000Z">
+<meta property="article:modified_time" content="2026-10-13T03:10:30.493Z">
+<meta property="article:author" content="Cui wenzhe">
+<meta property="article:tag" content="web安全">
+<meta property="article:tag" content="文件上传">
+<meta property="article:tag" content="靶场">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cuiwenzhe1.github.io/img/yasuo-cover.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "upload-labs 总结",
+  "url": "https://cuiwenzhe1.github.io/2026/10/11/upload-lab-%E6%80%BB%E7%BB%93/",
+  "image": "https://cuiwenzhe1.github.io/img/yasuo-cover.jpg",
+  "datePublished": "2026-10-11T13:19:18.000Z",
+  "dateModified": "2026-10-13T03:10:30.493Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Cui wenzhe",
+      "url": "https://cuiwenzhe1.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/touxiang.jpg"><link rel="canonical" href="https://cuiwenzhe1.github.io/2026/10/11/upload-lab-%E6%80%BB%E7%BB%93/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.7.0"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        const data = { value }
+
+        if (ttl != null) {
+          data.expiry = Date.now() + ttl * 86400000
+        }
+
+        localStorage.setItem(key, JSON.stringify(data))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return
+
+        try {
+          const data = JSON.parse(itemStr)
+
+          if (data.expiry && Date.now() > data.expiry) {
+            localStorage.removeItem(key)
+            return
+          }
+
+          return data.value
+        } catch {
+          localStorage.removeItem(key)
+        }
+      }
+    }
+
+    const scriptCache = new Map()
+    const cssCache = new Map()
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => {
+        if (scriptCache.has(url)) {
+          return scriptCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+
+          script.src = url
+          script.async = true
+
+          for (const key in attr) {
+            script.setAttribute(key, attr[key])
+          }
+
+          script.onload = resolve
+          script.onerror = reject
+
+          document.head.appendChild(script)
+        })
+
+        scriptCache.set(url, promise)
+
+        return promise
+      },
+      getCSS: (url, id) => {
+        if (cssCache.has(url)) {
+          return cssCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+
+          link.rel = 'stylesheet'
+          link.href = url
+
+          if (id) {
+            link.id = id
+          }
+
+          link.onload = resolve
+          link.onerror = reject
+
+          document.head.appendChild(link)
+        })
+
+        cssCache.set(url, promise)
+
+        return promise
+      },
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      const activateDarkMode = () => {
+        document.documentElement.dataset.theme = 'dark'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.dataset.theme = 'light'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'upload-labs 总结',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.css"><meta name="generator" content="Hexo 8.1.2"></head><body><div class="bg-animation" id="web_bg" style="background-image: url(/img/bf1.jpg);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/touxiang.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">5</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">8</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/shuoshuo/"><i class="fa-fw fas fa-comment-dots"></i><span> 说说</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/projects/"><i class="fa-fw fas fa-code"></i><span> 项目</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/yasuo-cover.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">cwzbb's blog</span></a><a class="nav-page-title" href="/"><span class="site-name">upload-labs 总结</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/shuoshuo/"><i class="fa-fw fas fa-comment-dots"></i><span> 说说</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/projects/"><i class="fa-fw fas fa-code"></i><span> 项目</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">upload-labs 总结</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-10-11T13:19:18.000Z" title="发表于 2026-10-11 21:19:18">2026-10-11</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-10-13T03:10:30.493Z" title="更新于 2026-10-13 11:10:30">2026-10-13</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E7%BD%91%E5%AE%89%E5%AD%A6%E4%B9%A0/">网安学习</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>依旧暑假期间通关的靶场，现在正好当作复习总结</p>
+<p>Upload-Labs 是一个使用 PHP 语言编写的，专门用于学习文件上传漏洞的靶场。它包含了 21 种常见的文件上传漏洞场景，用来入门文件上传。<br>基于靶场的练习，掌握文件上传的基本绕过方法，校验原理，以及防范措施</p>
+<span id="more"></span>
+
+<h2 id="本质"><a href="#本质" class="headerlink" title="本质"></a>本质</h2><p>一个标准的文件上传功能流程是：用户选择文件 -&gt; 浏览器将文件发送至服务器 -&gt; 服务器接收并处理文件 -&gt; 将文件存储在某个可访问的目录。漏洞产生的根本原因在于，服务器对用户上传的文件过于信任，缺乏足够、有效的校验，导致攻击者能够上传被服务器解释执行的可执行脚本（如PHP、JSP、ASP文件）。</p>
+<h2 id="踩坑"><a href="#踩坑" class="headerlink" title="踩坑"></a>踩坑</h2><ul>
+<li>注意不要用127.0.01，改用本机ip，否则bp可能抓不到 &#x2F;(ㄒoㄒ)&#x2F;~~</li>
+<li>上传文件只在：upload-labs\upload\  (只针对本靶场)</li>
+<li>注意一句话木马的隔离，使用白名单，或者提前退出windows defender和杀软</li>
+</ul>
+<h2 id="一些个人思路"><a href="#一些个人思路" class="headerlink" title="一些个人思路"></a>一些个人思路</h2><p>有上传点就先上传试试，</p>
+<h2 id="检测层：前端与-MIME（P1–P2）"><a href="#检测层：前端与-MIME（P1–P2）" class="headerlink" title="检测层：前端与 MIME（P1–P2）"></a>检测层：前端与 MIME（P1–P2）</h2><h3 id="Pass-01-前端绕过"><a href="#Pass-01-前端绕过" class="headerlink" title="Pass-01 前端绕过"></a>Pass-01 前端绕过</h3><p>随便上传一个，并且bp抓包，没抓到，说明没走客户端，纯在前端</p>
+<p>bp抓包，修改后缀111.jpg为php，文件内为一句话木马，放包，连接蚁剑，成功。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;?php @eval($_POST[&#x27;pass&#x27;]); ?&gt;</span><br></pre></td></tr></table></figure>
+
+<p>其余方法，浏览器禁用JS</p>
+<h3 id="Pass-02-Content-Type"><a href="#Pass-02-Content-Type" class="headerlink" title="Pass-02 Content-Type"></a>Pass-02 Content-Type</h3><p>bp抓包，把content-type 改为源码要求的 image&#x2F;jpeg 即可<br>即，mime类型本质和前端校验一样，也是客户端控制</p>
+<p><strong>MIME补充</strong></p>
+<p>MIME类型（Multipurpose Internet Mail Extensions，多用途互联网邮件扩展）是一种标准，用来标识文件的本质和格式。在HTTP协议中，它通过 <code>Content-Type</code> 这个字段来传递。<br>例如，当你上传一张图片时，浏览器发送的HTTP请求头中会包含类似这样的信息：</p>
+<ul>
+<li><code>Content-Type: image/jpeg</code>（表示JPEG图片）</li>
+<li><code>Content-Type: image/png</code>（表示PNG图片）</li>
+</ul>
+<p>常见的MIME类型还有：</p>
+<ul>
+<li><code>text/html</code>：HTML文档</li>
+<li><code>text/plain</code>：纯文本文件</li>
+<li><code>application/x-httpd-php</code>：PHP脚本</li>
+</ul>
+<h2 id="黑名单系（P3–P11）"><a href="#黑名单系（P3–P11）" class="headerlink" title="黑名单系（P3–P11）"></a>黑名单系（P3–P11）</h2><h3 id="Pass-03-黑名单"><a href="#Pass-03-黑名单" class="headerlink" title="Pass-03 黑名单"></a>Pass-03 黑名单</h3><p>目前文件上传基本都是白名单，即只让……通过</p>
+<p>特殊解析后缀绕过是由于黑名单过滤规则不严谨，在某些特定的情况下的后缀也能够被当作php文件进行解析</p>
+<p>查看源码：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$deny_ext</span> = <span class="keyword">array</span>(<span class="string">&#x27;.asp&#x27;</span>,<span class="string">&#x27;.aspx&#x27;</span>,<span class="string">&#x27;.php&#x27;</span>,<span class="string">&#x27;.jsp&#x27;</span>);</span><br><span class="line"><span class="variable">$file_name</span> = <span class="title function_ invoke__">trim</span>(<span class="variable">$_FILES</span>[<span class="string">&#x27;upload_file&#x27;</span>][<span class="string">&#x27;name&#x27;</span>]);</span><br><span class="line"><span class="variable">$file_name</span> = <span class="title function_ invoke__">deldot</span>(<span class="variable">$file_name</span>); <span class="comment">//删除文件名末尾的点</span></span><br><span class="line"><span class="variable">$file_ext</span> = <span class="title function_ invoke__">strrchr</span>(<span class="variable">$file_name</span>, <span class="string">&#x27;.&#x27;</span>);</span><br><span class="line"><span class="variable">$file_ext</span> = <span class="title function_ invoke__">strtolower</span>(<span class="variable">$file_ext</span>); <span class="comment">//转换为小写</span></span><br><span class="line"><span class="variable">$file_ext</span> = <span class="title function_ invoke__">str_ireplace</span>(<span class="string">&#x27;::$DATA&#x27;</span>, <span class="string">&#x27;&#x27;</span>, <span class="variable">$file_ext</span>); <span class="comment">//去除字符串::$DATA</span></span><br><span class="line"><span class="variable">$file_ext</span> = <span class="title function_ invoke__">trim</span>(<span class="variable">$file_ext</span>); <span class="comment">//收尾去空</span></span><br></pre></td></tr></table></figure>
+
+<p>黑名单不全，后缀绕过 例如php3，php5，phtml</p>
+<blockquote>
+<p>[!note] 补充自速查手册<br>上传成功 ≠ 能执行。默认配置下 PHP 引擎只认 <code>.php</code>，本地要看到结果得改 Apache。本机是 fcgid 不是 mod_php，改法：<code>Apache2.4.39\conf\vhosts\0localhost_80.conf</code> 里给 <code>AddHandler fcgid-script</code> 和 <code>FcgidWrapper</code> 两行加上 <code>.php3 .php5 .phtml</code>，重启 Apache。验证：传一个只含 <code>&lt;?php echo &quot;WORKS&quot;;?&gt;</code> 的 <code>.php3</code>，访问回显 WORKS 即生效。真实渗透改不了别人的服务器，对应动作是后缀探测。</p>
+</blockquote>
+<h3 id="Pass-04-htaccess"><a href="#Pass-04-htaccess" class="headerlink" title="Pass-04 .htaccess"></a>Pass-04 .htaccess</h3><p>黑名单依旧存在且完整</p>
+<p>原理：.htaccess 是Apache的分布式配置文件，可以放在特定目录下，覆盖主配置，定义该目录的访问规则。其中一条规则是 AddType application&#x2F;x-httpd-php .jpg ，意思是将所有 .jpg 文件当作PHP来解析。</p>
+<p>此关当时没修改小皮的版本，就直接看的教程：<br>1.准备一个.htaccess 文件</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&lt;FilesMatch &quot;shell.jpg&quot;&gt;</span><br><span class="line">SetHandler application/x-httpd-php</span><br><span class="line">&lt;/FilesMatch&gt;</span><br></pre></td></tr></table></figure>
+<p>含义为让Apache将名为shell.jpg 的文件当作PHP脚本来解析<br>2 上传该文件<br>准备一个包含php代码的图片马，命名为shell.jpg<br>上传，发现代码已被执行</p>
+<p>总结：允许上传.htaccess文件的情况下，攻击者可以<strong>定义文件解析规则</strong></p>
+<h3 id="Pass-05-user-ini"><a href="#Pass-05-user-ini" class="headerlink" title="Pass-05 .user.ini"></a>Pass-05 .user.ini</h3><p>此关后，我把php里的一句话木马直接改为phpinfo（） 直接右键新建查看，即可查看是否上传成功</p>
+<p><strong>法2</strong></p>
+<p>bp抓包，使用 .空格. 来绕过</p>
+<p>原理查看第五关源码</p>
+<p><strong>第十关</strong>也可用同样的操作</p>
+<blockquote>
+<p>[!note] 补充自速查手册<br>这关黑名单漏了 <code>.user.ini</code>。<code>.user.ini</code> 是 PHP 的用户级配置文件（PHP-FPM&#x2F;FastCGI 环境生效），写 <code>auto_prepend_file=shell.jpg</code>，该目录下所有 PHP 执行前都会先自动包含 shell.jpg。先传 <code>.user.ini</code> 再传 jpg 木马，访问目录下任意 PHP 即触发。</p>
+</blockquote>
+<p>补充：在 <strong>Windows 操作系统</strong> 下，文件名末尾的 <strong>点和空格</strong> 会被系统自动忽略并去除（这是 Windows 文件系统的特性）。</p>
+<h3 id="Pass-06-大小写"><a href="#Pass-06-大小写" class="headerlink" title="Pass-06 大小写"></a>Pass-06 大小写</h3><p>比较简单，过滤里的 <code>$file_ext = strtolower($file_ext); //转换为小写</code></p>
+<p>strtolower 没了，直接改后缀.PhP</p>
+<h3 id="Pass-07-空格"><a href="#Pass-07-空格" class="headerlink" title="Pass-07 空格"></a>Pass-07 空格</h3><p>缺失 <code>$file_ext = trim($file_ext); //首尾去空</code></p>
+<p>php加空格即可</p>
+<h3 id="Pass-08-点号"><a href="#Pass-08-点号" class="headerlink" title="Pass-08 点号"></a>Pass-08 点号</h3><blockquote>
+<p>[!note] 笔记缺，补自速查手册<br>清理逻辑里 deldot 没了，或没删干净。传 <code>shell.php.</code>：取后缀得到 <code>php.</code>，不等于 <code>php</code>，放行；Windows 文件系统写入时自动去掉末尾的点，落盘变回 <code>shell.php</code>。</p>
+</blockquote>
+<h3 id="Pass-09-ADS"><a href="#Pass-09-ADS" class="headerlink" title="Pass-09 ADS"></a>Pass-09 ADS</h3><p>过滤少了：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$file_ext</span> = <span class="title function_ invoke__">str_ireplace</span>(<span class="string">&#x27;::$DATA&#x27;</span>, <span class="string">&#x27;&#x27;</span>, <span class="variable">$file_ext</span>);</span><br><span class="line"><span class="comment">//去除字符串::$DATA</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>未命名数据流</strong>：<code>::$DATA</code> 指的就是文件默认的、未命名的<strong>主数据流</strong>和 test.php::$DATA 在Windows看来，指向的是同一个东西。</li>
+<li><strong>命名数据流</strong>：你可以创建自己的命名数据流，比如 <code>test.php:hidden.txt</code></li>
+</ul>
+<p>你的这个数据流，里面内容不会检测后缀，就比如上面：.php:后面也可txt</p>
+<p>&#x3D;&#x3D;本质：抓包修改后缀，上传的时候 服务端检测 认为 1.php::$DATA 是数据流，放行&#x3D;&#x3D;<br>&#x3D;&#x3D;当Windows系统接收到这个文件名时认为::$DATA是你要去访问主数据六，再删去，于是变回1.php能够被执行&#x3D;&#x3D;</p>
+<p>系统会创建一个名为 <code>shell.php</code> 的文件，并将上传的<strong>内容写入这个文件的主数据流中</strong></p>
+<h3 id="Pass-10-双写"><a href="#Pass-10-双写" class="headerlink" title="Pass-10 双写"></a>Pass-10 双写</h3><p>源码：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$file_name</span> = <span class="title function_ invoke__">str_ireplace</span>(<span class="variable">$deny_ext</span>,<span class="string">&quot;&quot;</span>, <span class="variable">$file_name</span>);</span><br></pre></td></tr></table></figure>
+
+<p>如果在黑名单里，就置空</p>
+<p>&#x3D;&#x3D;与sql一致&#x3D;&#x3D;，只过滤一遍，且从左到右</p>
+<p>pphphp 即可</p>
+<blockquote>
+<p>[!note] 补充自速查手册<br>这关标题虽是双写，但实际源码是”点+空格组合”：黑名单、大小写、点号、ADS、空格全处理了，deldot 实现有缝。传 <code>shell.php. </code>（点+空格，末尾有空格），<code>strrchr</code> 取到的后缀经处理变成 <code>.</code>（只有一个点），不在黑名单放行；落盘原名又被 Windows 去尾点尾空格，变回 shell.php。</p>
+</blockquote>
+<h3 id="Pass-11-00截断"><a href="#Pass-11-00截断" class="headerlink" title="Pass-11 %00截断"></a>Pass-11 %00截断</h3><p>查看源码发现 &#x3D;&#x3D;启用白名单&#x3D;&#x3D;</p>
+<p>条件：主要影响 <strong>PHP 版本低于 5.3.4</strong></p>
+<p>原理：</p>
+<p>PHP版本&lt;5.3.4 时存在的漏洞，白名单校验时 <code>%00</code>（NUL 字符）后面的内容会被字符串处理函数截断，只看前面的 <code>.php</code>；保存时 <code>%00</code> 后的内容丢弃。<strong>本机 PHP 5.3.29 &#x2F; 7.3.4 均已修复</strong>（PHP ≥ 5.3.4），做不出效果，仅当教学。</p>
+<h3 id="Pass-12、13-00截断（POST-版）"><a href="#Pass-12、13-00截断（POST-版）" class="headerlink" title="Pass-12、13 %00截断（POST 版）"></a>Pass-12、13 %00截断（POST 版）</h3><p> 同第 11 关，只是 <code>save_path</code> 变成了 POST 参数。POST 的 <code>%00</code> 需要在 Burp 里手动改为空字节，同样在 PHP ≥ 5.3.4 失效。</p>
+<h2 id="内容检测系：图片马（P14–P17）"><a href="#内容检测系：图片马（P14–P17）" class="headerlink" title="内容检测系：图片马（P14–P17）"></a>内容检测系：图片马（P14–P17）</h2><h3 id="14-16-图片马"><a href="#14-16-图片马" class="headerlink" title="14-16 图片马"></a>14-16 图片马</h3><p>工具：010editor？</p>
+<h4 id="14-文件头检测"><a href="#14-文件头检测" class="headerlink" title="14 文件头检测"></a>14 文件头检测</h4><p>源码：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$file</span> = <span class="title function_ invoke__">fopen</span>(<span class="variable">$filename</span>, <span class="string">&quot;rb&quot;</span>);</span><br><span class="line"><span class="variable">$bin</span> = <span class="title function_ invoke__">fread</span>(<span class="variable">$file</span>, <span class="number">2</span>); <span class="comment">//只读2字节</span></span><br></pre></td></tr></table></figure>
+<p>制作图片马： 命令行执行：copy &#x2F;b normal.jpg + shell.php webshell.jpg</p>
+<p>P14 起是”开始检测文件内容”（从只看后缀&#x2F;MIME 转向看文件字节），但检测深度只有 2 字节</p>
+<p>上传你的图片码，但是是以合法方式解析，还需要&#x3D;&#x3D;一个契机&#x3D;&#x3D;让其以php方式解析，即提到的文件包含漏洞</p>
+<p>其存在于upload文件的上层目录，用.&#x2F; 即可</p>
+<p>15、16 关检测函数换成 <code>getimagesize()</code> 和 <code>exif_imagetype()</code>，这三种图片验证函数（文件头、getimagesize、exif_imagetype）本质上都是检查文件魔术字，都可以通过制作图片马来绕过检测，但都需要二次漏洞（如文件包含）才能getshell</p>
+<h3 id="17-二次渲染绕过"><a href="#17-二次渲染绕过" class="headerlink" title="17 二次渲染绕过"></a>17 二次渲染绕过</h3><p>最严格的图片上传验证，对上传的图片进行二次渲染，会破坏嵌入在图片中的恶意代码<br>GIF绕过方法：上传一张正常GIF图片，并下载渲染后的图片，使用010editor对比两张图片，找到渲染不改变的部分，把php代码转换为16进制，插入，再上传</p>
+<p>总结：如果网站必须允许用户上传图片，那么将上传目录设置为不可执行，或者将图片存储到单独的静态文件服务器&#x2F;对象存储，是更安全的做法</p>
+<h3 id="18-条件竞争"><a href="#18-条件竞争" class="headerlink" title="18 条件竞争"></a>18 条件竞争</h3><p>关卡提示：将上传文件先保存，再检查，不合格则删除，即存在一个时间窗口<br>利用bp的intruder</p>
+<p>看运气，主要知道这种方法，熟悉bp用法</p>
+<p>绕过方法：1.写一个不断生成木马的PHP脚本<br>2.使用bp的intruder模块，持续，重复的上传脚本<br>3.并同时快速访问 。。。。&#x2F;upload&#x2F;compete_shell.php<br>服务器端的流程：<br>请求A上传了 compete.php -&gt; 文件被保存。</p>
+<p>在它被删除前的一瞬间，请求B访问了 compete.php -&gt; 该文件被执行，在我们的指定目录（如 upload&#x2F;）下生成了一个新的、不会被删除的 Webshell compete_shell.php。<br>总结：安全检查顺序的重要性，先检查后保存</p>
+<h2 id="逻辑与审计系（P19–P21）"><a href="#逻辑与审计系（P19–P21）" class="headerlink" title="逻辑与审计系（P19–P21）"></a>逻辑与审计系（P19–P21）</h2><h3 id="19-Apache-解析漏洞"><a href="#19-Apache-解析漏洞" class="headerlink" title="19 Apache 解析漏洞"></a>19 Apache 解析漏洞</h3><p> 在 Apache 1.x、2.x 中，存在一个解析漏洞：当遇到不认识的后缀时，会从后往前解析，直到遇到认识的后缀。<br> 传shell.php.xxx 即可</p>
+<h3 id="20，21-数组name"><a href="#20，21-数组name" class="headerlink" title="20，21 数组name"></a>20，21 数组name</h3><p>当时时间不够，仅看解析<br>这两关依据网站给出的源码判断逻辑，上传木马，进行修改，主要利用<br> $_FILES[‘upload_file’][‘name’][0] 可能为空或与预期不同，可能导致校验逻辑被绕过。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>面对一个真实的上传点，检查清单应该是这样的：</p>
+<p><strong>信息收集</strong>：前端有无JS校验？Burp抓包看请求结构。尝试上传各种异常文件（超大文件、畸形文件名、不同后缀），观察错误信息。错误信息有时会泄露路径、服务器技术（Apache&#x2F;Nginx&#x2F;IIS）、后端语言（PHP&#x2F;Java&#x2F;.NET）等。</p>
+<h2 id="后记"><a href="#后记" class="headerlink" title="后记"></a>后记</h2><p>写总结期间去刷了几道upload题目，感觉几个常见漏洞的结合做的还不是很好<br>接下来可能继续看php反序列化，也可能继续看看免杀，根据时间来吧</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://cuiwenzhe1.github.io">Cui wenzhe</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://cuiwenzhe1.github.io/2026/10/11/upload-lab-%E6%80%BB%E7%BB%93/">https://cuiwenzhe1.github.io/2026/10/11/upload-lab-%E6%80%BB%E7%BB%93/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://cuiwenzhe1.github.io" target="_blank">cwzbb's blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/web%E5%AE%89%E5%85%A8/">web安全</a><a class="post-meta__tags" href="/tags/%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0/">文件上传</a><a class="post-meta__tags" href="/tags/%E9%9D%B6%E5%9C%BA/">靶场</a></div><div class="post-share"><div class="social-share" data-image="/img/yasuo-cover.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/10/07/%E8%AE%B0%E9%80%9D%E5%8E%BB%E7%9A%84%E5%9B%BD%E5%BA%86/" title="记逝去的国庆"><img class="cover" src="/img/yasuo-cover.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">记逝去的国庆</div></div><div class="info-2"><div class="info-item-1">第一条说说，最近想做的事太多，cmc，上信考，还想玩玩ai短剧我的国庆假期就这么流走了….. </div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/08/26/xss-labs%E9%80%9A%E5%85%B3%E6%80%BB%E7%BB%93/" title="XSS-labs 20关通关总结"><img class="cover" src="/img/yasuo-cover.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-08-27</div><div class="info-item-2">XSS-labs 20关通关总结</div></div><div class="info-2"><div class="info-item-1">XSS-labs 是本地 phpstudy 环境的反射型 XSS专项靶场，闯关判定：靶场重写了 window.alert，只要触发 alert() 就自动跳转下一关。做完 SQL-labs 再来做这个，上手很快——很多关卡的思路本质就是”闭合原语句，插入 payload”。 这篇文章主要按防御手法把 20 关串一遍。   无过滤与属性注入（L1–L4）L1：$_GET[&quot;name&quot;] 直接 echo 出来，零过滤。&lt;script&gt;alert(1)&lt;/script&gt; 直接过。 L2：输出点移到了 &lt;input value=&quot;...&quot;&gt; 里。h2 部分用了 htmlspecialchars，但拼 value 时忘了过滤。&quot;&gt; 闭合属性再插标签即可： 1&quot;&gt;&lt;script&gt;alert(&#x27;xss&#x27;)&lt;/script&gt;  L3：两处都加了 htmlspecialchars，但它默认 ENT_COMPAT 模式——只转义双引号，不转义单引号。...</div></div></div></a></div></div><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="giscus-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/touxiang.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Cui wenzhe</div><div class="author-info-description">now you can see me</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">5</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">8</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/cuiwenzhe1"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/cuiwenzhe1" target="_blank" title="GitHub"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="https://weixin.qq.com" target="_blank" title="微信"><i class="fab fa-weixin" style="color: #07C160;"></i></a><a class="social-icon" href="https://space.bilibili.com/3493093733042245" target="_blank" title="B站"><i class="fab fa-bilibili" style="color: #fb7299;"></i></a><a class="social-icon" href="https://blog.csdn.net/cwz0528" target="_blank" title="CSDN"><i class="fas fa-laptop-code" style="color: #e40008;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%89%8D%E8%A8%80"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9C%AC%E8%B4%A8"><span class="toc-number">2.</span> <span class="toc-text">本质</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%B8%A9%E5%9D%91"><span class="toc-number">3.</span> <span class="toc-text">踩坑</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E4%BA%9B%E4%B8%AA%E4%BA%BA%E6%80%9D%E8%B7%AF"><span class="toc-number">4.</span> <span class="toc-text">一些个人思路</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%A3%80%E6%B5%8B%E5%B1%82%EF%BC%9A%E5%89%8D%E7%AB%AF%E4%B8%8E-MIME%EF%BC%88P1%E2%80%93P2%EF%BC%89"><span class="toc-number">5.</span> <span class="toc-text">检测层：前端与 MIME（P1–P2）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Pass-01-%E5%89%8D%E7%AB%AF%E7%BB%95%E8%BF%87"><span class="toc-number">5.1.</span> <span class="toc-text">Pass-01 前端绕过</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Pass-02-Content-Type"><span class="toc-number">5.2.</span> <span class="toc-text">Pass-02 Content-Type</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%BB%91%E5%90%8D%E5%8D%95%E7%B3%BB%EF%BC%88P3%E2%80%93P11%EF%BC%89"><span class="toc-number">6.</span> <span class="toc-text">黑名单系（P3–P11）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Pass-03-%E9%BB%91%E5%90%8D%E5%8D%95"><span class="toc-number">6.1.</span> <span class="toc-text">Pass-03 黑名单</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Pass-04-htaccess"><span class="toc-number">6.2.</span> <span class="toc-text">Pass-04 .htaccess</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Pass-05-user-ini"><span class="toc-number">6.3.</span> <span class="toc-text">Pass-05 .user.ini</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Pass-06-%E5%A4%A7%E5%B0%8F%E5%86%99"><span class="toc-number">6.4.</span> <span class="toc-text">Pass-06 大小写</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Pass-07-%E7%A9%BA%E6%A0%BC"><span class="toc-number">6.5.</span> <span class="toc-text">Pass-07 空格</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Pass-08-%E7%82%B9%E5%8F%B7"><span class="toc-number">6.6.</span> <span class="toc-text">Pass-08 点号</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Pass-09-ADS"><span class="toc-number">6.7.</span> <span class="toc-text">Pass-09 ADS</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Pass-10-%E5%8F%8C%E5%86%99"><span class="toc-number">6.8.</span> <span class="toc-text">Pass-10 双写</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Pass-11-00%E6%88%AA%E6%96%AD"><span class="toc-number">6.9.</span> <span class="toc-text">Pass-11 %00截断</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Pass-12%E3%80%8113-00%E6%88%AA%E6%96%AD%EF%BC%88POST-%E7%89%88%EF%BC%89"><span class="toc-number">6.10.</span> <span class="toc-text">Pass-12、13 %00截断（POST 版）</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%85%E5%AE%B9%E6%A3%80%E6%B5%8B%E7%B3%BB%EF%BC%9A%E5%9B%BE%E7%89%87%E9%A9%AC%EF%BC%88P14%E2%80%93P17%EF%BC%89"><span class="toc-number">7.</span> <span class="toc-text">内容检测系：图片马（P14–P17）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#14-16-%E5%9B%BE%E7%89%87%E9%A9%AC"><span class="toc-number">7.1.</span> <span class="toc-text">14-16 图片马</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#14-%E6%96%87%E4%BB%B6%E5%A4%B4%E6%A3%80%E6%B5%8B"><span class="toc-number">7.1.1.</span> <span class="toc-text">14 文件头检测</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#17-%E4%BA%8C%E6%AC%A1%E6%B8%B2%E6%9F%93%E7%BB%95%E8%BF%87"><span class="toc-number">7.2.</span> <span class="toc-text">17 二次渲染绕过</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-%E6%9D%A1%E4%BB%B6%E7%AB%9E%E4%BA%89"><span class="toc-number">7.3.</span> <span class="toc-text">18 条件竞争</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%80%BB%E8%BE%91%E4%B8%8E%E5%AE%A1%E8%AE%A1%E7%B3%BB%EF%BC%88P19%E2%80%93P21%EF%BC%89"><span class="toc-number">8.</span> <span class="toc-text">逻辑与审计系（P19–P21）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#19-Apache-%E8%A7%A3%E6%9E%90%E6%BC%8F%E6%B4%9E"><span class="toc-number">8.1.</span> <span class="toc-text">19 Apache 解析漏洞</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#20%EF%BC%8C21-%E6%95%B0%E7%BB%84name"><span class="toc-number">8.2.</span> <span class="toc-text">20，21 数组name</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">9.</span> <span class="toc-text">总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%90%8E%E8%AE%B0"><span class="toc-number">10.</span> <span class="toc-text">后记</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/10/11/upload-lab-%E6%80%BB%E7%BB%93/" title="upload-labs 总结"><img src="/img/yasuo-cover.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="upload-labs 总结"/></a><div class="content"><a class="title" href="/2026/10/11/upload-lab-%E6%80%BB%E7%BB%93/" title="upload-labs 总结">upload-labs 总结</a><time datetime="2026-10-11T13:19:18.000Z" title="发表于 2026-10-11 21:19:18">2026-10-11</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/09/20/CCP%E5%A4%87%E8%80%83%E6%80%BB%E7%BB%93/" title="CCP 备考总结"><img src="/img/yasuo-cover.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="CCP 备考总结"/></a><div class="content"><a class="title" href="/2026/09/20/CCP%E5%A4%87%E8%80%83%E6%80%BB%E7%BB%93/" title="CCP 备考总结">CCP 备考总结</a><time datetime="2026-09-20T16:00:00.000Z" title="发表于 2026-09-21 00:00:00">2026-09-21</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/08/26/xss-labs%E9%80%9A%E5%85%B3%E6%80%BB%E7%BB%93/" title="XSS-labs 20关通关总结"><img src="/img/yasuo-cover.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="XSS-labs 20关通关总结"/></a><div class="content"><a class="title" href="/2026/08/26/xss-labs%E9%80%9A%E5%85%B3%E6%80%BB%E7%BB%93/" title="XSS-labs 20关通关总结">XSS-labs 20关通关总结</a><time datetime="2026-08-26T16:00:00.000Z" title="发表于 2026-08-27 00:00:00">2026-08-27</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/08/12/%E6%88%91%E7%9A%84%E7%AC%AC%E4%B8%80%E7%AF%87%E6%96%87%E7%AB%A0/" title="我的第一篇文章"><img src="/img/yasuo-cover.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="我的第一篇文章"/></a><div class="content"><a class="title" href="/2026/08/12/%E6%88%91%E7%9A%84%E7%AC%AC%E4%B8%80%E7%AF%87%E6%96%87%E7%AB%A0/" title="我的第一篇文章">我的第一篇文章</a><time datetime="2026-08-12T07:00:48.000Z" title="发表于 2026-08-12 15:00:48">2026-08-12</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-info-row"><div class="footer-info-col footer-info-left"><div class="footer-info-item"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a></div><div class="footer-info-item"><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.7.0</a></div></div><div class="footer-info-col footer-info-center"><div class="footer-info-item"><span>本站已运行</span><span id="site-runtime"></span></div><div class="footer-info-item"><span>文章数</span><span id="site-post-count">5</span></div><div class="footer-info-item"><span class="copyright">&copy;&nbsp;2025 - 2026 By Cui wenzhe</span><span class="footer-heart">♥</span></div></div><div class="footer-info-col footer-info-right"><div class="footer-info-item"><span>访客</span><span id="busuanzi_value_site_uv"></span></div><div class="footer-info-item"><span>浏览</span><span id="busuanzi_value_site_pv"></span></div></div></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.7.0"></script><script src="/js/main.js?v=5.7.0"></script><div class="js-pjax"><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = {"data-lang":"zh-CN"}
+
+  const getGiscusTheme = theme => theme === 'dark' ? 'dark' : 'light'
+
+  const createScriptElement = config => {
+    const ele = document.createElement('script')
+    Object.entries(config).forEach(([key, value]) => {
+      ele.setAttribute(key, value)
+    })
+    return ele
+  }
+
+  const loadGiscus = (el = document, key) => {
+    const mappingConfig = isShuoshuo
+      ? { 'data-mapping': 'specific', 'data-term': key }
+      : { 'data-mapping': (option && option['data-mapping']) || 'pathname' }
+
+    const giscusConfig = {
+      src: 'https://giscus.app/client.js',
+      'data-repo': 'cuiwenzhe1/cuiwenzhe1.github.io',
+      'data-repo-id': 'R_kgDOT00yFQ',
+      'data-category-id': 'DIC_kwDOT00yFc4DDMlI',
+      'data-theme': getGiscusTheme(document.documentElement.getAttribute('data-theme')),
+      'data-reactions-enabled': '1',
+      crossorigin: 'anonymous',
+      async: true,
+      ...option,
+      ...mappingConfig
+    }
+
+    const scriptElement = createScriptElement(giscusConfig)
+
+    el.querySelector('#giscus-wrap').appendChild(scriptElement)
+
+    if (isShuoshuo) {
+      window.shuoshuoComment.destroyGiscus = () => {
+        if (el.children.length) {
+          el.innerHTML = ''
+          el.classList.add('no-comment')
+        }
+      }
+    }
+  }
+
+  const changeGiscusTheme = theme => {
+    const iframe = document.querySelector('#giscus-wrap iframe')
+    if (iframe) {
+      const message = {
+        giscus: {
+          setConfig: {
+            theme: getGiscusTheme(theme)
+          }
+        }
+      }
+      iframe.contentWindow.postMessage(message, 'https://giscus.app')
+    }
+  }
+
+  btf.addGlobalFn('themeChange', changeGiscusTheme, 'giscus')
+
+  if (isShuoshuo) {
+    'Giscus' === 'Giscus'
+      ? window.shuoshuoComment = { loadComment: loadGiscus }
+      : window.loadOtherComment = loadGiscus
+    return
+  }
+
+  if ('Giscus' === 'Giscus' || !false) {
+    if (false) btf.loadComment(document.getElementById('giscus-wrap'), loadGiscus)
+    else loadGiscus()
+  } else {
+    window.loadOtherComment = loadGiscus
+  }
+})()</script></div><script src="/js/snow.js?v=8"></script><script src="/js/busuanzi-fix.js?v=1"></script><script src="https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.js"></script><script>window.meting_api = 'https://api.injahow.cn/meting/?server=:server&type=:type&id=:id';</script><script src="https://cdn.jsdelivr.net/npm/meting@2.0.1/dist/Meting.min.js"></script><div id="ink-player" class="ink-player"><div class="ink-player-head"><span class="ink-player-title" id="ink-song-title">正在加载…</span><span class="ink-player-hint">≋</span></div><meting-js server="tencent" type="playlist" id="9762369050" list-folded="true" order="random" theme="#1d1d1f" preload="auto" autoplay="false" lock="true"></meting-js></div><script src="/js/aplayer-drag.js"></script><script src="/js/typewriter.js" data-pjax></script><script src="/js/siteinfo.js" data-pjax></script><script src="https://cdn.jsdelivr.net/npm/pjax@0.2.8/pjax.min.js" defer="defer"></script><script>document.addEventListener('DOMContentLoaded', () => {
+  const pjaxSelectors = ["meta[property=\"og:image\"]","meta[property=\"og:title\"]","meta[property=\"og:url\"]","meta[property=\"og:description\"]","link[rel=\"canonical\"]","head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"]):not([data-fancybox])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => {
+      try {
+        fn()
+      } catch (err) {
+        console.debug('Pjax callback failed:', err)
+      }
+    })
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      if (!item.parentNode) return
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || ''
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    const responseURL = e.request && e.request.responseURL
+    if (e.request && e.request.status === 404) {
+      false
+        ? pjax.loadUrl('/404.html')
+        : responseURL && (window.location.href = responseURL)
+    } else if (responseURL) {
+      window.location.href = responseURL
+    }
+  })
+})</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
