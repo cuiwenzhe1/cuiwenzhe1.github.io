@@ -1,21 +1,23 @@
 /**
- * calendar.js 的姊妹文件 —— 侧栏「墨历」发文月历
+ * 侧栏「日历」：左侧今天 + 右侧月历
  * ══════════════════════════════════════════════════════════════
- * 挂在公告卡里（容器 #ink-heatmap），显示当月日历，左右箭头翻月：
+ * 挂在公告卡里（容器 #ink-heatmap）。布局按 fomal 的 aside-calendar：
  *
- *     ‹   2026年10月   ›
- *     日 一 二 三 四 五 六
- *                       1  2  3
- *      4  5  6  7  8  9 10
- *     …
+ *     第46周 周六        日 一 二 三 四 五 六
+ *          14            ...
+ *     2026年11月 第318天
+ *     丙午马年 十月初六
+ *     ── 10天后是 小雪 ──
  *
- *   · 红色字 = 节日（直接把名字写在格子里，节气和小节日只标红不写字）
- *   · 深色圆底 = 今天
- *   · 名字下面的小墨点 = 当天发了文章
+ *   · 左侧：第几周/星期、日期、年内第几天、农历
+ *   · 右侧：当月网格（不翻月），深色圆底 = 今天，红字 = 节日，绿圈 = 当天发了文章
+ *   · 底部：下一个节气，版式对照 fomal 的 .cal-extra
  *   · 悬停任意格子 → 日期 / 节日 / 文章标题；点有文章的格子跳过去
  *
  * 数据来自构建期生成的 /data/heatmap.json（见 scripts/heatmap-data.js），
- * 浏览器端不请求任何外部接口。农历换算在构建期做完了，这边不用管。
+ * 浏览器端不请求任何外部接口。农历只在构建期算好今天的值写进 JSON，
+ * 不引入 fomal 那份 1000 多行的浏览器版 lunar.js；运行日期和构建日期不一致时
+ * 前端会隐藏农历行，避免显示旧数据。
  *
  * 依赖：无。pjax 兼容：监听 pjax:complete 重新挂载。
  */
@@ -27,24 +29,43 @@
   var WEEK_CN = ['日', '一', '二', '三', '四', '五', '六']
   var WEEK_START = 0          // 0 = 周日开头（跟 fomalhaut 的月历一致）
 
-  // 节日分「重要」和「一般」：重要的把名字写进格子里，一般的只把数字标红
-  // （格子里字多了会糊成一片，尤其手机上）。加新节日时照着归类。
+  // 重要节日加粗；格子里不再写节日名，名字放在悬停浮层里。
   var BIG_FESTIVALS = [
     '元旦', '春节', '元宵节', '清明节', '清明', '劳动节', '端午节',
     '中秋节', '国庆节', '重阳节', '腊八节', '冬至', '七夕', '中元节', '龙抬头'
   ]
 
   var payload = null
-  var view = null             // 当前显示的 { y, m }（m 是 0-11）
   var tip = null
 
   /* ── 工具 ───────────────────────────────────────────── */
 
   function pad2 (n) { return (n < 10 ? '0' : '') + n }
   function fmt (d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) }
-  function parseDay (s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]) }
 
-  function today () { return parseDay(payload.today) }
+  function startOfDay (d) {
+    var x = new Date(d.getTime())
+    x.setHours(0, 0, 0, 0)
+    return x
+  }
+
+  // 运行期的今天，不用构建日，避免页面挂着跨天后还显示旧日期
+  function today () { return startOfDay(new Date()) }
+
+  // ISO-8601 周号：含当年第一个周四的那一周算第 1 周
+  function isoWeek (d) {
+    var t = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+    t.setDate(t.getDate() - ((t.getDay() + 6) % 7) + 3)
+    var isoYear = t.getFullYear()
+    var jan4 = new Date(isoYear, 0, 4)
+    var week1Thu = new Date(isoYear, 0, 4 - ((jan4.getDay() + 6) % 7) + 3)
+    return 1 + Math.round((t - week1Thu) / 604800000)
+  }
+
+  function dayOfYear (d) {
+    var start = new Date(d.getFullYear(), 0, 1)
+    return Math.round((startOfDay(d) - start) / 86400000) + 1
+  }
 
   function escapeHtml (s) {
     return String(s).replace(/[&<>"]/g, function (c) {
@@ -109,26 +130,37 @@
   }
 
   function render (root) {
-    var y = view.y
-    var m = view.m
     var t = today()
+    var y = t.getFullYear()
+    var m = t.getMonth()
     var first = new Date(y, m, 1)
     var dim = new Date(y, m + 1, 0).getDate()          // 当月天数
     var lead = (first.getDay() - WEEK_START + 7) % 7   // 1 号前面空几格
 
-    var html = ''
+    // 农历只在构建日和运行日一致时显示；不引入浏览器版农历库
+    var lunar = payload.lunar && payload.lunar.date === fmt(t) ? payload.lunar : null
+    var lunarHtml = lunar
+      ? '<div class="hm-lunar">' + escapeHtml(lunar.gzYear + lunar.animal + '年 ' + lunar.month + lunar.day) + '</div>'
+      : ''
 
-    // 头部：翻月
-    var prevDis = canPrev() ? '' : ' disabled'
-    var nextDis = canNext() ? '' : ' disabled'
-    html += '<div class="hm-head">' +
-      '<button type="button" class="hm-nav" data-step="-1" aria-label="上个月"' + prevDis + '>‹</button>' +
-      '<span class="hm-title">' + y + '年' + (m + 1) + '月</span>' +
-      '<button type="button" class="hm-nav" data-step="1" aria-label="下个月"' + nextDis + '>›</button>' +
-      '</div>'
+    // 底部一行：下一个节气，版式对照 fomal 的 .cal-extra
+    var term = payload.nextTerm
+    var extraHtml = term
+      ? '<div class="hm-extra"><span class="hm-extra-term">' +
+        (term.days === 0 ? '今天就是' : term.days + '天后是') +
+        '<em>' + escapeHtml(term.name) + '</em></span></div>'
+      : ''
+
+    var html = '<div class="hm-main">' +
+      '<div class="hm-today">' +
+        '<div class="hm-week">第' + isoWeek(t) + '周 周' + WEEK_CN[t.getDay()] + '</div>' +
+        '<div class="hm-daynum">' + pad2(t.getDate()) + '</div>' +
+        '<div class="hm-solar">' + y + '年' + (m + 1) + '月 第' + dayOfYear(t) + '天</div>' +
+        lunarHtml +
+      '</div>' +
+      '<div class="hm-grid">'
 
     // 表头 + 日期格
-    html += '<div class="hm-grid">'
     for (var w = 0; w < 7; w++) {
       html += '<span class="hm-hd">' + WEEK_CN[(WEEK_START + w) % 7] + '</span>'
     }
@@ -141,58 +173,25 @@
       var big = isBig(info.f)
 
       var cls = 'hm-cell'
-      if (key === payload.today) cls += ' is-today'
+      if (key === fmt(t)) cls += ' is-today'
       if (info.f) cls += ' is-fes'
       if (big) cls += ' is-fes-big'
       // is-post 只加个类，绿圈由 CSS 套在数字外面（.hm-cell.is-post .hm-day）
       if (info.n) cls += ' is-post'
       var clickable = info.u ? ' role="button" tabindex="0"' : ''
-      var label = big ? '<em class="hm-fname">' + escapeHtml(big) + '</em>' : ''
 
       html += '<span class="' + cls + '" data-date="' + key + '"' + clickable + '>' +
-        '<b class="hm-day">' + d + '</b>' + label + '</span>'
+        '<b class="hm-day">' + d + '</b></span>'
     }
-    html += '</div>'
 
+    html += '</div></div>' + extraHtml
     root.innerHTML = html
-
-    // 翻月
-    var navs = root.querySelectorAll('.hm-nav')
-    for (var i = 0; i < navs.length; i++) {
-      navs[i].addEventListener('click', function (e) {
-        e.preventDefault()
-        var step = +this.getAttribute('data-step')
-        stepMonth(step, root)
-      })
-    }
 
     // 格子交互
     var cells = root.querySelectorAll('.hm-cell[data-date]')
     for (var c = 0; c < cells.length; c++) {
       bindCell(cells[c], root)
     }
-  }
-
-  /** 还能往前翻：不早于数据覆盖的最早日期 */
-  function canPrev () {
-    var limit = payload.from ? parseDay(payload.from) : null
-    if (!limit) return true
-    return new Date(view.y, view.m, 1) > new Date(limit.getFullYear(), limit.getMonth(), 1)
-  }
-
-  /** 还能往后翻：不超过今天所在月 */
-  function canNext () {
-    var t = today()
-    return new Date(view.y, view.m, 1) < new Date(t.getFullYear(), t.getMonth(), 1)
-  }
-
-  function stepMonth (step, root) {
-    if (step < 0 && !canPrev()) return
-    if (step > 0 && !canNext()) return
-    hideTip()
-    var d = new Date(view.y, view.m + step, 1)
-    view = { y: d.getFullYear(), m: d.getMonth() }
-    render(root)
   }
 
   function bindCell (el, root) {
@@ -236,8 +235,6 @@
       })
       .then(function (data) {
         payload = data
-        var t = today()
-        view = { y: t.getFullYear(), m: t.getMonth() }
         box.setAttribute('data-hm-ready', '1')
         render(box)
       })

@@ -1,4 +1,4 @@
-/* busuanzi 统计修复:pjax 切换分页不再重复计数,页脚数字保持不变 */
+/* 计数脚本修复（不蒜子 / Vercount）:pjax 切换分页不再重复计数,页脚数字保持不变 */
 (function () {
   var PV = 'busuanzi_value_site_pv';
   var UV = 'busuanzi_value_site_uv';
@@ -15,9 +15,9 @@
     if ((el = document.getElementById(UV)) && cache.uv) el.textContent = cache.uv;
   }
 
-  // 1) busuanzi 只在真正刷新页面时计数:去掉它的 data-pjax,翻页(pjax)不再重新执行
+  // 1) 计数脚本只在真正刷新页面时执行:去掉它的 data-pjax,翻页(pjax)不再重新执行
   function strip() {
-    var s = document.querySelector('script[data-pjax][src*="busuanzi"]');
+    var s = document.querySelector('script[data-pjax][src*="busuanzi"], script[data-pjax][src*="vercount"]');
     if (s) s.removeAttribute('data-pjax');
   }
   if (document.readyState === 'loading') {
